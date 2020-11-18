@@ -22,22 +22,23 @@ app.use(cors())
 //     next()
 // }
 
-app.post("/reviews", auth, async (req, res)=>{
+app.post("/Order", auth, async (req, res)=>{
     
-    try{var movieFK = req.body.movieFK;
-        var summary = req.body.summary;
-        var rating = req.body.rating;
+    try{var clothesFK = req.body.clothesFK;
+        var quantity = req.body.quantity;
+        var price = req.body.price;
+        var size = req.body.size;
     
-        if(!movieFK || !summary || !rating){res.status(400).send("bad request")}
+        if(!clothesFK || !quantity || !price || !size){res.status(400).send("bad request")}
     
-        summary = summary.replace("'", "''")
+        // summary = summary.replace("'", "''")
 
         // console.log("here is the contact in /reviews ",req.contact)
         // res.send("here is your response")}
 
-        let insertQuery = `INSERT INTO Review(Summary, Rating, MovieFK, ContactFK)
-        OUTPUT inserted.ReviewPK, inserted.Summary, inserted.Rating, inserted.MovieFK
-        VALUES('${summary}', '${rating}', '${movieFK}', ${req.contact.ContactPK})`
+        let insertQuery = `INSERT INTO Order(Quantity, Price, Size, CustomerFK, ClothesFK)
+        OUTPUT inserted.OrderPK, inserted.Quantity, inserted.Price, inserted.Size, inserted.ClothesFK
+        VALUES('${quantity}', '${price}', '${size}', '${clothesFK}', ${req.customer.CustomerPK})`
 
         let insertedReview = await db.executeQuery(insertQuery)
 
@@ -45,15 +46,15 @@ app.post("/reviews", auth, async (req, res)=>{
         res.status(500).send(insertedReview[0])
     }
     catch(error){
-        console.log("error in POST /reviews" , error)
+        console.log("error in POST /order" , error)
         res.status(500).send
     }
    
 
 })
 
-app.get('/contacts/me', auth, (req, res)=> {
-    res.send(req.contact)
+app.get('/customers/me', auth, (req, res)=> {
+    res.send(req.customer)
 })
 
 
@@ -61,7 +62,7 @@ app.get("/hi", (req,res)=>{
     res.send("hello world")
 })
 
-app.post("/contacts/login", async (req, res)=>{
+app.post("/customers/login", async (req, res)=>{
     //console.log(req.body)
 
     var email = req.body.email;
@@ -73,7 +74,7 @@ app.post("/contacts/login", async (req, res)=>{
 
     //1. check that user email exists in database
     var query = `SELECT * 
-    FROM Contact
+    FROM Customer
     WHERE Email = '${email}'`
 
     let result;
@@ -81,7 +82,7 @@ app.post("/contacts/login", async (req, res)=>{
     try{
         result = await db.executeQuery(query);
     }catch(myError){
-        console.log('error in /contacts/login', myError);
+        console.log('error in /customers/login', myError);
         return res.status(500).send()
     } 
 
@@ -100,14 +101,14 @@ app.post("/contacts/login", async (req, res)=>{
     }
 
     //3. generate a token 
-    let token = jwt.sign({pk: user.ContactPK}, config.JWT, {expiresIn: '60 minutes'})
+    let token = jwt.sign({pk: user.CustomerPK}, config.JWT, {expiresIn: '60 minutes'})
 
     // console.log(token)
 
     //4. save token in database and send token and user info back to user
-    let setTokenQuery = `UPDATE Contact
+    let setTokenQuery = `UPDATE Customer
     SET Token = '${token}'
-    WHERE ContactPK = ${user.ContactPK}`
+    WHERE CustomerPK = ${user.CustomerPK}`
 
     try{
         await db.executeQuery(setTokenQuery)
@@ -115,10 +116,10 @@ app.post("/contacts/login", async (req, res)=>{
         res.status(200).send({
             token: token,
             user: {
-                NameFirst: user.NameFirst,
-                NameLast: user.NameLast,
+                FirstName: user.FirstName,
+                LastName: user.NameLast,
                 Email: user.Email,
-                ContactPK: user.ContactPK
+                CustomerPK: user.CustomerPK
             }
         })
     }
@@ -129,24 +130,25 @@ app.post("/contacts/login", async (req, res)=>{
 
 })
 
-app.post("/contacts", async (req, res)=> {
-    // res.send("creating user")
-    // console.log("request body", req.body)
+app.post("/customers", async (req, res)=> {
+    res.send("creating user")
+    console.log("request body", req.body)
 
-    var nameFirst = req.body.nameFirst
-    var nameLast = req.body.nameLast
+    var firstName = req.body.firstName
+    var lastName = req.body.lastName
     var email = req.body.email
     var password = req.body.password
+    var state = req.body.state
 
-    if(!nameFirst || !nameLast || !email || !password) {
+    if(!firstName || !lastName || !email || !password || !state) {
         return res.status(400).send("bad request")
     }
 
-    nameFirst = nameFirst.replace("'", "''")
-    nameLast = nameLast.replace("'", "''")
+    firstName = firstName.replace("'", "''")
+    lastName = lastName.replace("'", "''")
 
     var emailCheckQuery = `SELECT email 
-    FROM contact
+    FROM customer
     WHERE email ='${email}'`
 
     var existingUser = await db.executeQuery(emailCheckQuery)
@@ -157,26 +159,26 @@ app.post("/contacts", async (req, res)=> {
 
     var hashedPassword = bcrypt.hashSync(password)
 
-    var insertQuery = `INSERT INTO contact(NameFirst, NameLast, Email, Password)
-    VALUES('${nameFirst}', '${nameLast}', '${email}', '${hashedPassword}')`
+    var insertQuery = `INSERT INTO customer(FirstName, LastName, Email, Password, State)
+    VALUES('${firstName}', '${lastName}', '${email}', '${hashedPassword}', '${state}')`
 
     db.executeQuery(insertQuery)
     .then(()=>{
         res.status(201).send()
     })
     .catch((err)=> {
-        console.log("error in post /contacts", err)
+        console.log("error in post /customers", err)
         res.status(500).send()
     })
 
 })
 
-app.get("/movies", (req,res)=>{
+app.get("/clothes", (req,res)=>{
     //get data from database
     db.executeQuery(`SELECT *
-    from movie
-    LEFT JOIN genre
-    ON genre.GenrePK = movie.GenreFK`)
+    from Clothes
+    LEFT JOIN Brand
+    ON genre.BrandPK = clothes.BrandFK`)
     .then((result)=>{
         res.status(200).send(result)
     })
@@ -186,28 +188,28 @@ app.get("/movies", (req,res)=>{
     })
 })
 
-app.get("/movies/:pk", (req, res)=> {
+app.get("/clothes/:pk", (req, res)=> {
     var pk = req.params.pk
     
     var  myQuery = `SELECT *
-    FROM movie
-    LEFT JOIN genre
-    ON genre.GenrePK = movie.GenreFK
-    WHERE moviePK = ${pk}`
+    FROM Clothes
+    LEFT JOIN Brand
+    ON Brand.BrandPK = Clothes.BrandFK
+    WHERE ClothesPK = ${pk}`
 
     console.log(myQuery)
 
     db.executeQuery(myQuery)
-        .then((movies)=>{
+        .then((clothes)=>{
             // console.log("Movies: ", movies)
-            if(movies[0]){
-                res.send(movies[0])
+            if(clothes[0]){
+                res.send(clothes[0])
             }
             else{res.status(404).send('bad request')}
             
         })
         .catch((err)=>{
-            console.log("Error in /movies/pk", err)
+            console.log("Error in /clothes/pk", err)
             res.status(500).send()
         })
 }

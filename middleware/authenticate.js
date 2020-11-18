@@ -15,12 +15,12 @@ const auth = async(req, res, next) => {
         let decodedToken = jwt.verify(myToken, config.JWT)
         console.log(decodedToken)
 
-        let contactPK = decodedToken.pk;
-        console.log(contactPK)
+        let customerPK = decodedToken.pk;
+        console.log(customerPK)
         //2. compare token with database token
-        let query = `SELECT ContactPK, NameFirst, NameLast, Email
-        FROM Contact
-        WHERE ContactPK = ${contactPK} and Token = '${myToken}'`
+        let query = `SELECT CustomerPK, FirstName, LastName, Email
+        FROM Customer
+        WHERE CustomerPK = ${customerPK} and Token = '${myToken}'`
 
         let returnedUser = await db.executeQuery(query)
         console.log(returnedUser)
