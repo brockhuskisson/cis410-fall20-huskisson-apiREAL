@@ -15,12 +15,55 @@ const app = express();
 app.use(express.json())
 app.use(cors())
 
+app.post('/customers/logout', auth, (req, res)=> {
+    var query = `UPDATE Customer
+    SET Token = null
+    WHERE CustomerPK = ${req.customer.CustomerPK}`
+
+    db.executeQuery(query)
+        .then(()=>{res.status(200).send()})
+        .catch((error)=>{
+            console.log("error in POST /Customers/logout", error)
+            res.status(500).send()
+
+        })
+})
+
+app.get("/", (req, res)=> {res.send("Hello World.")})
 
 
 // const auth = async(req, res, next) => {
 //     console.log(req.header("Authorization"))
 //     next()
 // }
+
+app.get('/Order/me', auth, async(req, res)=>{
+    let customerPK = req.customer.CustomerPK;
+
+    var  myQuery = `SELECT *
+    FROM OrderTable
+    LEFT JOIN Clothes
+    ON Clothes.ClothesPK = OrderTable.ClothesFK
+    WHERE CustomerFK = ${customerPK}`
+
+    console.log(myQuery)
+
+    db.executeQuery(myQuery)
+        .then((orders)=>{
+            // console.log("Movies: ", movies)
+            if(orders[0]){
+                res.send(orders[0])
+            }
+            else{res.status(404).send('bad request')}
+            
+        })
+        .catch((err)=>{
+            console.log("Error in /Order/me", err)
+            res.status(500).send()
+        })
+
+})
+
 
 app.post("/Order", auth, async (req, res)=>{
     
@@ -36,9 +79,11 @@ app.post("/Order", auth, async (req, res)=>{
         // console.log("here is the contact in /reviews ",req.contact)
         // res.send("here is your response")}
 
-        let insertQuery = `INSERT INTO Order(Quantity, Price, Size, CustomerFK, ClothesFK)
+        let insertQuery = `INSERT INTO OrderTable(Quantity, Price, Size, CustomerFK, ClothesFK)
         OUTPUT inserted.OrderPK, inserted.Quantity, inserted.Price, inserted.Size, inserted.ClothesFK
-        VALUES('${quantity}', '${price}', '${size}', '${clothesFK}', ${req.customer.CustomerPK})`
+        VALUES(${quantity}, ${price}, '${size}', ${req.customer.CustomerPK}, ${clothesFK})`
+
+        // console.log(insertQuery);
 
         let insertedReview = await db.executeQuery(insertQuery)
 
@@ -52,6 +97,10 @@ app.post("/Order", auth, async (req, res)=>{
    
 
 })
+
+// app.get('/Order/:pk', auth, (req, res)=>{
+//     res.send(req.orders)
+// })
 
 app.get('/customers/me', auth, (req, res)=> {
     res.send(req.customer)
@@ -178,7 +227,7 @@ app.get("/clothes", (req,res)=>{
     db.executeQuery(`SELECT *
     from Clothes
     LEFT JOIN Brand
-    ON genre.BrandPK = clothes.BrandFK`)
+    ON Brand.BrandPK = clothes.BrandFK`)
     .then((result)=>{
         res.status(200).send(result)
     })
@@ -212,9 +261,35 @@ app.get("/clothes/:pk", (req, res)=> {
             console.log("Error in /clothes/pk", err)
             res.status(500).send()
         })
-}
+})
 
-)
+// app.get("/Order/:pk", (req, res)=> {
+//     var pk = req.params.pk
+    
+//     var  myQuery = `SELECT *
+//     FROM OrderTable
+//     LEFT JOIN Clothes
+//     ON Clothes.ClothesPK = OrderTable.ClothesFK
+//     WHERE OrderPK = ${pk}`
+
+//     console.log(myQuery)
+
+//     db.executeQuery(myQuery)
+//         .then((orders)=>{
+//             console.log("Orders: ", orders)
+//             if(orders[0]){
+//                 res.send(orders[0])
+//             }
+//             else{res.status(404).send('bad request')}
+            
+//         })
+//         .catch((err)=>{
+//             console.log("Error in /orders/pk", err)
+//             res.status(500).send()
+//         })
+// }
+
+// )
 
 const PORT = process.env.PORT || 5000
 app.listen(PORT,()=>{console.log(`app is running on port ${PORT}`)})

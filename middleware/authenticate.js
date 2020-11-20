@@ -26,7 +26,7 @@ const auth = async(req, res, next) => {
         console.log(returnedUser)
         //3. save user info in the request
         if(returnedUser[0]){
-            req.contact = returnedUser[0]
+            req.customer = returnedUser[0]
             next()
         }
         else(res.status(401).send('Authenitaction failed'))

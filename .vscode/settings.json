@@ -2,5 +2,7 @@
     "appService.zipIgnorePattern": [
         "node_modules{,/**}",
         ".vscode{,/**}"
-    ]
+    ],
+    "appService.defaultWebAppToDeploy": "/subscriptions/c7c6f7cb-403a-42f1-aba7-1ffc9f8f24f4/resourceGroups/appsvc_linux_centralus/providers/Microsoft.Web/sites/cis410-fa20-huskisson-api1",
+    "appService.deploySubpath": "."
 }
